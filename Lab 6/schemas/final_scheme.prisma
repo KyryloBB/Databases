@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model car {
+  car_id             Int            @id @default(autoincrement())
+  driving_school_id  Int
+  model              String         @db.VarChar(60)
+  gearbox            gearbox
+  year_of_production Int
+  mileage            String         @db.VarChar(10)
+  license_plate      String         @unique @db.Char(8)
+  driving_school     driving_school @relation(fields: [driving_school_id], references: [driving_school_id], onDelete: NoAction, onUpdate: NoAction)
+  instructor         instructor?
+  maintenances      car_maintenance[]
+}
+
+model car_maintenance {
+  car_maintenance_id      Int         @id @default(autoincrement())
+  car_id                  Int
+  date                    DateTime    @db.Date
+  number_of_problems      Int?
+  description_of_problems String? 
+  car                     car         @relation(fields: [car_id], references: [car_id]) 
+}
+
+model contact_data {
+  contact_data_id Int             @id(map: "contactdata_pkey") @default(autoincrement())
+  phone           String          @unique(map: "contactdata_phone_key") @db.VarChar(13)
+  email           String?         @unique(map: "contactdata_email_key") @db.VarChar(32)
+  driving_school  driving_school?
+  instructor      instructor?
+  student         student?
+  teacher         teacher?
+}
+
+model driving_school {
+  driving_school_id     Int              @id(map: "drivingschool_pkey") @default(autoincrement())
+  contact_data_id       Int              @unique(map: "drivingschool_contact_data_id_key")
+  address               String           @unique(map: "drivingschool_address_key") @db.VarChar(60)
+  full_name_of_director String           @unique(map: "drivingschool_director_key") @db.VarChar(60)
+  car                   car[]
+  contact_data          contact_data     @relation(fields: [contact_data_id], references: [contact_data_id], onDelete: NoAction, onUpdate: NoAction, map: "drivingschool_contact_data_id_fkey")
+  instructor            instructor[]
+  membership            membership[]
+  student               student[]
+  teacher               teacher[]
+  training_ground       training_ground?
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model instructor {
+  instructor_id     Int                     @id @default(autoincrement())
+  car_id            Int                     @unique
+  driving_school_id Int
+  contact_data_id   Int                     @unique
+  name              String                  @db.VarChar(32)
+  surname           String                  @db.VarChar(32)
+  seniority         String                  @db.VarChar(16)
+  car               car                     @relation(fields: [car_id], references: [car_id], onDelete: NoAction, onUpdate: NoAction)
+  contact_data      contact_data            @relation(fields: [contact_data_id], references: [contact_data_id], onDelete: NoAction, onUpdate: NoAction)
+  driving_school    driving_school          @relation(fields: [driving_school_id], references: [driving_school_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model membership {
+  membership_id     Int                     @id @default(autoincrement())
+  student_id        Int
+  driving_school_id Int
+  start_date        DateTime                @db.Date
+  end_date          DateTime                @db.Date
+  plan              membership_plan
+  status            membership_status
+  driving_school    driving_school          @relation(fields: [driving_school_id], references: [driving_school_id], onDelete: NoAction, onUpdate: NoAction)
+  student           student                 @relation(fields: [student_id], references: [student_id], onDelete: NoAction, onUpdate: NoAction)
+  payment           payment?
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model payment {
+  payment_id    Int            @id @default(autoincrement())
+  membership_id Int            @unique
+  student_id    Int
+  amount        Int
+  method        payment_method
+  status        payment_status
+  date          DateTime       @db.Timestamp(6)
+  membership    membership     @relation(fields: [membership_id], references: [membership_id], onDelete: NoAction, onUpdate: NoAction)
+  student       student        @relation(fields: [student_id], references: [student_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model student {
+  student_id                 Int            @id @default(autoincrement())
+  driving_school_id          Int
+  contact_data_id            Int            @unique
+  name                       String         @db.VarChar(32)
+  surname                    String         @db.VarChar(32)
+  sex                        sex
+  age                        Int
+  is_passed_theoretical_exam Boolean?
+  membership                 membership[]
+  payment                    payment[]
+  contact_data               contact_data   @relation(fields: [contact_data_id], references: [contact_data_id], onDelete: NoAction, onUpdate: NoAction)
+  driving_school             driving_school @relation(fields: [driving_school_id], references: [driving_school_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model teacher {
+  teacher_id        Int                     @id @default(autoincrement())
+  driving_school_id Int
+  contact_data_id   Int                     @unique
+  name              String                  @db.VarChar(32)
+  surname           String                  @db.VarChar(32)
+  seniority         String                  @db.VarChar(16)
+  contact_data      contact_data            @relation(fields: [contact_data_id], references: [contact_data_id], onDelete: NoAction, onUpdate: NoAction)
+  driving_school    driving_school          @relation(fields: [driving_school_id], references: [driving_school_id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model training_ground {
+  training_ground_id Int            @id(map: "trainingground_pkey") @default(autoincrement())
+  driving_school_id  Int            @unique(map: "trainingground_driving_school_id_key")
+  address            String         @unique(map: "trainingground_address_key") @db.VarChar(60)
+  driving_school     driving_school @relation(fields: [driving_school_id], references: [driving_school_id], onDelete: NoAction, onUpdate: NoAction, map: "trainingground_driving_school_id_fkey")
+}
+
+enum gearbox {
+  manual
+  automatic
+}
+
+enum membership_plan {
+  theory
+  practice
+}
+
+enum membership_status {
+  active
+  terminated
+  payment_failed @map("payment failed")
+}
+
+enum payment_method {
+  cash
+  credit_card
+  GooglePay
+}
+
+enum payment_status {
+  successful
+  failed
+}
+
+enum sex {
+  man
+  woman
+}
